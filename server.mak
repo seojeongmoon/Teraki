@@ -11,7 +11,7 @@ $(TARGET) : $(OBJS)
 	$(CC) $(OBJS) -o $@ -lcrypto -lssl
 	
 EXE : $(TARGET)
-	./$(TARGET)
+	./$(TARGET) $(PORT)
 	
 #clean all object files and executable file TARGET
 .PHONY: clean

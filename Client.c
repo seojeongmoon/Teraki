@@ -4,7 +4,12 @@
 #include <string.h>
 
 #define MAX 128
+#define PORT 3333
 
+int readFile(char *fname, 
+             unsigned char *plaintext);
+int encrypt(unsigned char *plaintext,
+             unsigned char *ciphertext);
 void handleErrors(void);
 int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
                 unsigned char *aad, int aad_len,
@@ -13,25 +18,100 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
                 unsigned char *ciphertext,
                 unsigned char *tag);
 
+int sendToServer(unsigned char *ciphertext, char *server_address){
+    int sockfd, connfd; 
+    struct sockaddr_in servaddr, cli; 
+
+    // socket create and verification 
+    sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+    if (sockfd == -1) { 
+        printf("socket creation failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("Socket successfully created..\n"); 
+    bzero(&servaddr, sizeof(servaddr)); 
+
+    // assign IP, PORT 
+    servaddr.sin_family = AF_INET; 
+    servaddr.sin_addr.s_addr = inet_addr(server_address); 
+    servaddr.sin_port = htons(PORT); 
+
+    // connect the client socket to server socket 
+    if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) { 
+        printf("connection with the server failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("connected to the server..\n"); 
+
+    // function for sending
+    write(sockfd, ciphertext, sizeof(ciphertext)); 
+
+    // close the socket 
+    close(sockfd); 
+}
+
 int main(int argc, char *argv[])
 {
+    unsigned char plaintext[MAX];
+
+    //second argument: file name
+    int plaintext_len = readFile(argv[1], plaintext);
+
+    if(plaintext_len<0){
+        printf("reading from file failed");
+    }
+
+    /* Buffer for ciphertext.  */
+    unsigned char ciphertext[128];
+
+    int ciphertext_len = encrypt(plaintext, ciphertext);
+
+    if(ciphertext_len>0){
+        printf("Ciphertext is:\n");
+        BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
+    }else{
+        printf("encryption failed");
+    }
+
+    /* 
+    * Send the ciphertext to server 
+    * the third argument is server address
+    */
+    
+    sendToServer(argv[2]);
+    //sendToServer("127.0.0.1");
+
+    return 0;
+}
+
+int readFile(char *fname, 
+             unsigned char* plaintext){
     //Read File
     FILE *fp;
-    unsigned char plaintext[MAX];
     /* Open the file of passed file name */
-    fp  = fopen(argv[1], "r");
+    fp  = fopen(fname, "r");
     if(fp == NULL)
     {
-        printf("could not read from file %s\n", argv[1]);
+        printf("could not read from file %s\n", fname);
         return -1;
     }
     /* Read the message to be encrypted */
     fgets(plaintext, MAX, fp); 
     fclose (fp);
 
-    /*
-     * Set up the key and iv. Do not hard code these in a real application.
-     */
+    int plaintext_len = strlen((char *)plaintext);
+
+    if(plaintext_len>0){
+        return plaintext_len;
+    }else {
+        return -1;
+    }
+}
+
+int encrypt(unsigned char* plaintext, unsigned char *ciphertext){
+    /* Set up the key and iv. Do not hard code these in a real application. */
 
     /* A 256 bit key */
     unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
@@ -44,12 +124,6 @@ int main(int argc, char *argv[])
     unsigned char *additional =
         (unsigned char *)"Accurate and efficient edge processing.";
 
-    /* Buffer for ciphertext.  */
-    unsigned char ciphertext[128];
-
-    /* Buffer for the decrypted text */
-    unsigned char decryptedtext[128];
-
     /* Buffer for the tag */
     unsigned char tag[16];
 
@@ -61,10 +135,7 @@ int main(int argc, char *argv[])
                                  key,
                                  iv, iv_len,
                                  ciphertext, tag);
-
-    /* Send the ciphertext here */
-
-    return 0;
+    return ciphertext_len;
 }
 
 void handleErrors(void)
@@ -137,4 +208,6 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
 
     return ciphertext_len;
 }
+
+
 

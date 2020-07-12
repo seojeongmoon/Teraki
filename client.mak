@@ -11,9 +11,7 @@ $(TARGET) : $(OBJS)
 	$(CC) $(OBJS) -o $@ -lcrypto -lssl
 	
 EXE : $(TARGET)
-	./$(TARGET) $(F_NAME) 
-
-# $(S_ADDR)
+	./$(TARGET) $(F_NAME) $(S_ADDR)
 	
 #clean all object files and executable file TARGET
 .PHONY: clean

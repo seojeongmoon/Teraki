@@ -2,11 +2,19 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <string.h>
+#include <stdio.h> 
+#include <netdb.h> 
+#include <netinet/in.h> 
+#include <stdlib.h> 
+#include <sys/socket.h> 
+#include <sys/types.h> 
 
+#define SA struct sockaddr 
 #define MAX 128
 
 void handleErrors(void);
-
+int decrypt(unsigned char *ciphertext, 
+            unsigned char *decryptedtext);
 int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
                 unsigned char *aad, int aad_len,
                 unsigned char *tag,
@@ -14,43 +22,80 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
                 unsigned char *iv, int iv_len,
                 unsigned char *plaintext);
 
+int receiveFromClient(char *port, unsigned char *ciphertext){
+    int sockfd, connfd, len; 
+    struct sockaddr_in servaddr, cli; 
+
+    // socket create and verification 
+    sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+    if (sockfd == -1) { 
+        printf("socket creation failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("Socket successfully created..\n"); 
+    bzero(&servaddr, sizeof(servaddr)); 
+
+    // assign IP, port 
+    servaddr.sin_family = AF_INET; 
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
+    servaddr.sin_port = htons(port); 
+
+    // Binding newly created socket to given IP and verification 
+    if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) { 
+        printf("socket bind failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("Socket successfully binded..\n"); 
+
+    // Now server is ready to listen and verification 
+    if ((listen(sockfd, 5)) != 0) { 
+        printf("Listen failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("Server listening..\n"); 
+    len = sizeof(cli); 
+
+    // Accept the data packet from client and verification 
+    connfd = accept(sockfd, (SA*)&cli, &len); 
+    if (connfd < 0) { 
+        printf("server acccept failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("server acccept the client...\n"); 
+
+    // read the message from client and copy it in ciphertext 
+    read(sockfd, ciphertext, sizeof(ciphertext));  
+
+    // After chatting close the socket 
+    close(sockfd); 
+
+    return strlen((char*) ciphertext);
+}
+
 int main(int argc, char *argv[]){
-    /*
-     * Set up the key and iv. Do not hard code these in a real application.
-     */
-
-    /* A 256 bit key */
-    unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
-
-    /* A 128 bit IV */
-    unsigned char *iv = (unsigned char *)"0123456789012345";
-    size_t iv_len = 16;
-
-    /* Additional data */
-    unsigned char *additional =
-        (unsigned char *)"Accurate and efficient edge processing.";
-    
+   
     /* Buffer for the ciphertext*/
     unsigned char ciphertext[128];
-    
+    int ciphertext_len;
+
+    /* receive ciphertext from the client*/ 
+    ciphertext_len = receiveFromClient(argv[1], ciphertext);
+
+    if(ciphertext_len>=0){
+        printf("Ciphertext is:\n");
+        BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
+    }else{
+        printf("reception failed");
+    }
+
     /* Buffer for the decrypted text */
     unsigned char decryptedtext[128];
 
-    /* Buffer for the tag */
-    unsigned char tag[16];
-
-    int decryptedtext_len;
-
-    //temporary code. ciphertext will be assigned what this server receives from the client
-    unsigned char text[] =  "hello";
-    *ciphertext = text[0];
-
-    /* Decrypt the ciphertext */
-    decryptedtext_len = gcm_decrypt(ciphertext, strlen ((char *)ciphertext),
-                                    additional, strlen ((char *)additional),
-                                    tag,
-                                    key, iv, iv_len,
-                                    decryptedtext);
+    int decryptedtext_len = decrypt(ciphertext, decryptedtext);
 
     if (decryptedtext_len >= 0) {
         /* Add a NULL terminator. We are expecting printable text */
@@ -63,7 +108,36 @@ int main(int argc, char *argv[]){
         printf("Decryption failed\n");
     }
 
+
 	return 0;
+}
+
+int decrypt(unsigned char *ciphertext, unsigned char *decryptedtext){
+    /* Set up the key and iv. Do not hard code these in a real application. */
+    
+    /* A 256 bit key */
+    unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
+
+    /* A 128 bit IV */
+    unsigned char *iv = (unsigned char *)"0123456789012345";
+    size_t iv_len = 16;
+
+    /* Additional data */
+    unsigned char *additional =
+        (unsigned char *)"Accurate and efficient edge processing.";
+    
+    /* Buffer for the tag */
+    unsigned char tag[16];
+
+    int decryptedtext_len;
+
+    /* Decrypt the ciphertext */
+    decryptedtext_len = gcm_decrypt(ciphertext, strlen ((char *)ciphertext),
+                                    additional, strlen ((char *)additional),
+                                    tag,
+                                    key, iv, iv_len,
+                                    decryptedtext);
+    return decryptedtext;
 }
 
 void handleErrors(void)

@@ -2,9 +2,14 @@
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <string.h>
+#include <netdb.h> 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <sys/socket.h> 
 
 #define MAX 128
 #define PORT 3333
+#define SA struct sockaddr 
 
 int readFile(char *fname, 
              unsigned char *plaintext);
@@ -17,44 +22,13 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
                 unsigned char *iv, int iv_len,
                 unsigned char *ciphertext,
                 unsigned char *tag);
-
-int sendToServer(unsigned char *ciphertext, char *server_address){
-    int sockfd, connfd; 
-    struct sockaddr_in servaddr, cli; 
-
-    // socket create and verification 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0); 
-    if (sockfd == -1) { 
-        printf("socket creation failed...\n"); 
-        exit(0); 
-    } 
-    else
-        printf("Socket successfully created..\n"); 
-    bzero(&servaddr, sizeof(servaddr)); 
-
-    // assign IP, PORT 
-    servaddr.sin_family = AF_INET; 
-    servaddr.sin_addr.s_addr = inet_addr(server_address); 
-    servaddr.sin_port = htons(PORT); 
-
-    // connect the client socket to server socket 
-    if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) { 
-        printf("connection with the server failed...\n"); 
-        exit(0); 
-    } 
-    else
-        printf("connected to the server..\n"); 
-
-    // function for sending
-    write(sockfd, ciphertext, sizeof(ciphertext)); 
-
-    // close the socket 
-    close(sockfd); 
-}
+void sendToServer(unsigned char *ciphertext, 
+                  char *server_address);
 
 int main(int argc, char *argv[])
 {
     unsigned char plaintext[MAX];
+    unsigned char ciphertext[128];
 
     //second argument: file name
     int plaintext_len = readFile(argv[1], plaintext);
@@ -64,7 +38,6 @@ int main(int argc, char *argv[])
     }
 
     /* Buffer for ciphertext.  */
-    unsigned char ciphertext[128];
 
     int ciphertext_len = encrypt(plaintext, ciphertext);
 
@@ -79,9 +52,9 @@ int main(int argc, char *argv[])
     * Send the ciphertext to server 
     * the third argument is server address
     */
-    
-    sendToServer(argv[2]);
-    //sendToServer("127.0.0.1");
+
+    sendToServer(ciphertext, argv[2]);
+    //sendToServer(ciphertext,"127.0.0.1");
 
     return 0;
 }
@@ -209,5 +182,39 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
     return ciphertext_len;
 }
 
+
+void sendToServer(unsigned char *ciphertext, char *server_address){
+    int sockfd, connfd; 
+    struct sockaddr_in servaddr, cli; 
+
+    // socket create and verification 
+    sockfd = socket(AF_INET, SOCK_STREAM, 0); 
+    if (sockfd == -1) { 
+        printf("socket creation failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("Socket successfully created..\n"); 
+    bzero(&servaddr, sizeof(servaddr)); 
+
+    // assign IP, PORT 
+    servaddr.sin_family = AF_INET; 
+    servaddr.sin_addr.s_addr = inet_addr(server_address); 
+    servaddr.sin_port = htons(PORT); 
+
+    // connect the client socket to server socket 
+    if (connect(sockfd, (SA*)&servaddr, sizeof(servaddr)) != 0) { 
+        printf("connection with the server failed...\n"); 
+        exit(0); 
+    } 
+    else
+        printf("connected to the server..\n"); 
+
+    // function for sending
+    write(sockfd, ciphertext, sizeof(ciphertext)); 
+
+    // close the socket 
+    close(sockfd); 
+}
 
 

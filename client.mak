@@ -9,8 +9,6 @@ all: $(TARGET) EXE
 
 $(TARGET) : $(OBJS)
 	$(CC) $(OBJS) -o $@ -lcrypto -lssl
-
-	#-lcryptopp -Lsome_directory -lcrypto -lssl -lcryptopp 
 	
 EXE : $(TARGET)
 	./$(TARGET) $(F_NAME) 
@@ -28,4 +26,4 @@ clean:
 .PHONY: debug
 
 debug: $(OBJS)
-	$(CC) -o -d $@ $(OBJS)
+	$(CC) $(OBJS) -d $@ -lcrypto -lssl

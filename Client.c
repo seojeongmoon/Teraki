@@ -67,13 +67,11 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-
 void handleErrors(void)
 {
     ERR_print_errors_fp(stderr);
     abort();
 }
-
 
 int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
                 unsigned char *aad, int aad_len,

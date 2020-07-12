@@ -45,16 +45,12 @@ int main(int argc, char *argv[]){
     unsigned char text[] =  "hello";
     *ciphertext = text[0];
 
-    printf("decryption entered\n");
-
     /* Decrypt the ciphertext */
     decryptedtext_len = gcm_decrypt(ciphertext, strlen ((char *)ciphertext),
                                     additional, strlen ((char *)additional),
                                     tag,
                                     key, iv, iv_len,
                                     decryptedtext);
-
-    printf("decryption finished\n");
 
     if (decryptedtext_len >= 0) {
         /* Add a NULL terminator. We are expecting printable text */
@@ -92,27 +88,18 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
     if(!(ctx = EVP_CIPHER_CTX_new()))
         handleErrors();
     
-    printf("context created and initialized\n");
-
     /* Initialise the decryption operation. */
     if(!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL))
         handleErrors();
-
-    printf("decryption operation initialized\n");
-
 
     /* Set IV length. Not necessary if this is 12 bytes (96 bits) */
     if(!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, NULL))
         handleErrors();
 
-    printf("set IV length\n");
-
-
     /* Initialise key and IV */
     if(!EVP_DecryptInit_ex(ctx, NULL, NULL, key, iv))
         handleErrors();
 
-    printf("key and IV initialized\n");
     /*
      * Provide any AAD data. This can be called zero or more times as
      * required
@@ -128,14 +115,9 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
         handleErrors();
     plaintext_len = len;
 
-        printf("message to be decrypted\n");
-
-
     /* Set expected tag value. Works in OpenSSL 1.0.1d and later */
     if(!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 16, tag))
         handleErrors();
-
-        printf("set expected tag value\n");
 
     /*
      * Finalise the decryption. A positive return value indicates success,
@@ -143,14 +125,8 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
      */
     ret = EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
 
-    printf("decryption finalised\n");
-
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
-
-    printf("cleaned up\n");
-
-    printf("plaintext_len: %d, len: %d\n", plaintext_len, len);
 
     if(ret > 0) {
         /* Success */

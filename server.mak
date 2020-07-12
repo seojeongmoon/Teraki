@@ -8,7 +8,7 @@ all: $(TARGET) EXE
 .PHONY : all
 
 $(TARGET) : $(OBJS)
-	$(CC) -o $@ $(OBJS)
+	$(CC) $(OBJS) -o $@ -lcrypto -lssl
 	
 EXE : $(TARGET)
 	./$(TARGET)
@@ -24,7 +24,7 @@ clean:
 .PHONY: debug
 
 debug: $(OBJS)
-	$(CC) -o -d $@ $(OBJS)
+	$(CC) -g $(OBJS) -lcrypto -lssl
 
 	
 	

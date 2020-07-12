@@ -1,15 +1,12 @@
-#include <netdb.h> 
-#include <stdio.h> 
-#include <stdlib.h> 
-#include <string.h> 
-#include <sys/socket.h> 
+//https://wiki.openssl.org/index.php/EVP_Authenticated_Encryption_and_Decryption
+
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>
+#include <string.h>
 
-#define MAX 80
-#define PORT 8080 
-#define SA struct sockaddr 
+#define MAX 128
+
 
 void handleErrors(void);
 int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
@@ -25,33 +22,41 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
                 unsigned char *iv, int iv_len,
                 unsigned char *plaintext);
 
-
 int main(int argc, char *argv[])
-{	
-	//Read File
-	FILE *fp;
-	char plaintext[MAX];
-	fp  = fopen(argv[1], "r");
-	if(fp == NULL)
+{
+    //Read File
+    FILE *fp;
+    char content[MAX];
+    fp  = fopen(argv[1], "r");
+    if(fp == NULL)
     {
         printf("could not read from file %s\n", argv[1]);
         return -1;
     }
-	fgets(plaintext, MAX, fp); 
-	fclose (fp);
+    fgets(content, MAX, fp); 
+    fclose (fp);
 
-	unsigned char *additional =
-    (unsigned char *)"Accurate and Efficient Edge Processing";
+    printf("%s\n",content);
 
-	//Encrypt Content
-	// Never Hard Code Key and IV in a real application!
-	 /* A 256 bit key */
+    /*
+     * Set up the key and iv. Do not hard code these in a real application.
+     */
+
+    /* A 256 bit key */
     unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
 
     /* A 128 bit IV */
     unsigned char *iv = (unsigned char *)"0123456789012345";
-    
     size_t iv_len = 16;
+
+    /* Message to be encrypted */
+    unsigned char *plaintext =
+        (unsigned char*) content;
+    //    (unsigned char *)"The quick brown fox jumps over the lazy dog";
+
+    /* Additional data */
+    unsigned char *additional =
+        (unsigned char *)"The five boxing wizards jump quickly.";
 
     /*
      * Buffer for ciphertext. Ensure the buffer is long enough for the
@@ -61,7 +66,7 @@ int main(int argc, char *argv[])
     unsigned char ciphertext[128];
 
     /* Buffer for the decrypted text */
-    unsigned char decryptedtext[MAX];
+    unsigned char decryptedtext[128];
 
     /* Buffer for the tag */
     unsigned char tag[16];
@@ -75,6 +80,7 @@ int main(int argc, char *argv[])
                                  iv, iv_len,
                                  ciphertext, tag);
 
+    /* Do something useful with the ciphertext here */
     printf("Ciphertext is:\n");
     BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
 
@@ -99,13 +105,13 @@ int main(int argc, char *argv[])
         printf("Decryption failed\n");
     }
 
-    if(decryptedtext.equals(plaintext)){
-    	printf("encryption and decryption succeeded")
+    if(strcmp(decryptedtext, plaintext)==0){
+        printf("Encryption and Decryption succeeded.\n");
     }else{
-    	printf("encryption or decryption failed")
+        printf("Encryption or Decryption failed.\n");
     }
 
-	return 0;
+    return 0;
 }
 
 
@@ -181,6 +187,7 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
     return ciphertext_len;
 }
 
+
 int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
                 unsigned char *aad, int aad_len,
                 unsigned char *tag,
@@ -246,4 +253,3 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
         return -1;
     }
 }
-

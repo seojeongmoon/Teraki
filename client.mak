@@ -8,7 +8,9 @@ all: $(TARGET) EXE
 .PHONY : all
 
 $(TARGET) : $(OBJS)
-	$(CC) -o $@ $(OBJS)
+	$(CC) $(OBJS) -o $@ -lcrypto -lssl
+
+	#-lcryptopp -Lsome_directory -lcrypto -lssl -lcryptopp 
 	
 EXE : $(TARGET)
 	./$(TARGET) $(F_NAME) 

@@ -6,6 +6,7 @@
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <sys/socket.h> 
+#include <errno.h>
 
 #define MAX 128
 #define PORT 8080
@@ -13,7 +14,7 @@
 
 int readFile(char *fname, 
              unsigned char *plaintext);
-int encrypt(unsigned char *plaintext,
+void encrypt(unsigned char *plaintext,
              unsigned char *ciphertext);
 void handleErrors(void);
 int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
@@ -37,22 +38,13 @@ int main(int argc, char *argv[])
         printf("reading from file failed");
     }
 
-    /* Buffer for ciphertext.  */
-
-    int ciphertext_len = encrypt(plaintext, ciphertext);
-
-    if(ciphertext_len>0){
-        printf("Ciphertext is:\n");
-        BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
-    }else{
-        printf("encryption failed");
-    }
+    //encrypt the ciphertext
+    encrypt(plaintext, ciphertext);
 
     /* 
     * Send the ciphertext to server 
     * the third argument is server address
     */
-
     sendToServer(ciphertext, argv[2]);
     //sendToServer(ciphertext,"127.0.0.1");
 
@@ -67,7 +59,7 @@ int readFile(char *fname,
     fp  = fopen(fname, "r");
     if(fp == NULL)
     {
-        printf("could not read from file %s\n", fname);
+        printf("failed to read from the file %s\n", fname);
         return -1;
     }
     /* Read the message to be encrypted */
@@ -83,7 +75,7 @@ int readFile(char *fname,
     }
 }
 
-int encrypt(unsigned char* plaintext, unsigned char *ciphertext){
+void encrypt(unsigned char* plaintext, unsigned char *ciphertext){
     /* Set up the key and iv. Do not hard code these in a real application. */
 
     /* A 256 bit key */
@@ -100,7 +92,7 @@ int encrypt(unsigned char* plaintext, unsigned char *ciphertext){
     /* Buffer for the tag */
     unsigned char tag[16];
 
-    int decryptedtext_len, ciphertext_len;
+    int ciphertext_len;
 
     /* Encrypt the plaintext */
     ciphertext_len = gcm_encrypt(plaintext, strlen ((char *)plaintext),
@@ -108,7 +100,11 @@ int encrypt(unsigned char* plaintext, unsigned char *ciphertext){
                                  key,
                                  iv, iv_len,
                                  ciphertext, tag);
-    return ciphertext_len;
+    if(ciphertext_len>=0){
+    }else{
+      printf("encryption failed");
+      printf("error: %s\n",strerror(errno));
+    }
 }
 
 void handleErrors(void)
@@ -191,6 +187,7 @@ void sendToServer(unsigned char *ciphertext, char *server_address){
     sockfd = socket(AF_INET, SOCK_STREAM, 0); 
     if (sockfd == -1) { 
         printf("socket creation failed...\n"); 
+        printf("error: %s\n",strerror(errno));
         exit(0); 
     } 
     else
@@ -213,7 +210,14 @@ void sendToServer(unsigned char *ciphertext, char *server_address){
         printf("connected to the server..\n"); 
 
     // function for sending
-    write(sockfd, ciphertext, sizeof(ciphertext)); 
+    int write_result = write(sockfd, ciphertext, sizeof(ciphertext)); 
+
+    if(write_result>=0){
+        printf("Client sent data");
+    }else{
+        printf("Client failed to send data");
+        printf("error: %s\n",strerror(errno));
+    }
 
     // close the socket 
     close(sockfd); 

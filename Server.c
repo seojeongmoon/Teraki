@@ -8,6 +8,7 @@
 #include <stdlib.h> 
 #include <sys/socket.h> 
 #include <sys/types.h> 
+#include <errno.h>
 
 #define SA struct sockaddr 
 #define MAX 128
@@ -39,24 +40,21 @@ int main(int argc, char *argv[]){
         BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
     }else{
         printf("reception failed");
+        printf("error: %s\n",strerror(errno));    
     }
 
     /* Buffer for the decrypted text */
     unsigned char decryptedtext[128];
 
-    int decryptedtext_len = decrypt(ciphertext, decryptedtext);
+    int decryptedtext_len; 
+    decryptedtext_len = decrypt(ciphertext, decryptedtext);
 
     if (decryptedtext_len >= 0) {
-        /* Add a NULL terminator. We are expecting printable text */
-        decryptedtext[decryptedtext_len] = '\0';
 
-        /* Show the decrypted text */
-        printf("Decrypted text is:\n");
-        printf("%s\n", decryptedtext);
     } else {
         printf("Decryption failed\n");
+        printf("error: %s\n",strerror(errno));
     }
-
 
 	return 0;
 }
@@ -86,6 +84,18 @@ int decrypt(unsigned char *ciphertext, unsigned char *decryptedtext){
                                     tag,
                                     key, iv, iv_len,
                                     decryptedtext);
+
+    if(decryptedtext_len>=0){
+        /* Add a NULL terminator. We are expecting printable text */
+        decryptedtext[decryptedtext_len] = '\0';
+
+        /* Show the decrypted text */
+        printf("Decrypted text is:\n");
+        printf("%s\n", decryptedtext);
+    }else{
+        printf("Server failed to decrypt\n");
+        printf("error: %s\n",strerror(errno));
+    }
     return decryptedtext;
 }
 
@@ -162,7 +172,8 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
 }
 
 
-int receiveFromClient(char *port, unsigned char *ciphertext){
+int receiveFromClient(char *port, unsigned char *ciphertext)
+{
     int sockfd, connfd, len; 
     struct sockaddr_in servaddr, cli; 
 
@@ -170,6 +181,7 @@ int receiveFromClient(char *port, unsigned char *ciphertext){
     sockfd = socket(AF_INET, SOCK_STREAM, 0); 
     if (sockfd == -1) { 
         printf("socket creation failed...\n"); 
+        printf("error: %s\n",strerror(errno));
         exit(0); 
     } 
     else
@@ -183,7 +195,8 @@ int receiveFromClient(char *port, unsigned char *ciphertext){
 
     // Binding newly created socket to given IP and verification 
     if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) { 
-        printf("socket bind failed...\n"); 
+        printf("socket bind failed...\n");
+        printf("error: %s\n",strerror(errno));
         exit(0); 
     } 
     else
@@ -192,6 +205,7 @@ int receiveFromClient(char *port, unsigned char *ciphertext){
     // Now server is ready to listen and verification 
     if ((listen(sockfd, 5)) != 0) { 
         printf("Listen failed...\n"); 
+        printf("error: %s\n",strerror(errno));
         exit(0); 
     } 
     else
@@ -202,13 +216,21 @@ int receiveFromClient(char *port, unsigned char *ciphertext){
     connfd = accept(sockfd, (SA*)&cli, &len); 
     if (connfd < 0) { 
         printf("server acccept failed...\n"); 
+        printf("error: %s\n",strerror(errno));
         exit(0); 
     } 
     else
         printf("server acccept the client...\n"); 
 
     // read the message from client and copy it in ciphertext 
-    read(sockfd, ciphertext, sizeof(ciphertext));  
+    int read_result = read(connfd, ciphertext, sizeof(ciphertext));  
+
+    if(read_result>=0){
+        printf("Server received data");
+    }else{
+        printf("server failed to receive data");
+        printf("error: %s\n",strerror(errno));
+    }
 
     // After chatting close the socket 
     close(sockfd); 

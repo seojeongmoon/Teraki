@@ -8,7 +8,7 @@
 #include <sys/socket.h> 
 
 #define MAX 128
-#define PORT 3333
+#define PORT 8080
 #define SA struct sockaddr 
 
 int readFile(char *fname, 
@@ -195,11 +195,13 @@ void sendToServer(unsigned char *ciphertext, char *server_address){
     } 
     else
         printf("Socket successfully created..\n"); 
+    
     bzero(&servaddr, sizeof(servaddr)); 
 
     // assign IP, PORT 
     servaddr.sin_family = AF_INET; 
-    servaddr.sin_addr.s_addr = inet_addr(server_address); 
+    //servaddr.sin_addr.s_addr = inet_addr(server_address); 
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
     servaddr.sin_port = htons(PORT); 
 
     // connect the client socket to server socket 

@@ -11,6 +11,7 @@
 
 #define SA struct sockaddr 
 #define MAX 128
+#define PORT 8080
 
 void handleErrors(void);
 int decrypt(unsigned char *ciphertext, 
@@ -83,8 +84,8 @@ int main(int argc, char *argv[]){
     int ciphertext_len;
 
     /* receive ciphertext from the client*/ 
-    ciphertext_len = receiveFromClient(argv[1], ciphertext);
-
+    //ciphertext_len = receiveFromClient(argv[1], ciphertext);
+    ciphertext_len = receiveFromClient(PORT, ciphertext);
     if(ciphertext_len>=0){
         printf("Ciphertext is:\n");
         BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);

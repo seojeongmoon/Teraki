@@ -23,13 +23,15 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
                 unsigned char *key,
                 unsigned char *iv, int iv_len,
                 unsigned char *plaintext);
+void printString(const unsigned char *ciphertext_input, 
+                 const int ciphertext_len);
 int receiveFromClient(char *port, 
                       unsigned char *ciphertext);
 
 int main(int argc, char *argv[]){
    
     /* Buffer for the ciphertext*/
-    unsigned char ciphertext[128];
+    unsigned char ciphertext[MAX];
     int ciphertext_len;
 
     /* receive ciphertext from the client*/ 
@@ -44,7 +46,7 @@ int main(int argc, char *argv[]){
     }
 
     /* Buffer for the decrypted text */
-    unsigned char decryptedtext[128];
+    unsigned char decryptedtext[MAX];
 
     int decryptedtext_len; 
     decryptedtext_len = decrypt(ciphertext, decryptedtext);
@@ -171,6 +173,14 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
     }
 }
 
+void printString(const unsigned char *ciphertext_input, const int ciphertext_len){
+    unsigned char ciphertext[MAX];
+    strcpy(ciphertext, ciphertext_input);
+
+    ciphertext[ciphertext_len]='\0';
+    printf("Ciphertext as string is:\n");
+    printf("%s\n", ciphertext);
+}
 
 int receiveFromClient(char *port, unsigned char *ciphertext)
 {
@@ -228,13 +238,14 @@ int receiveFromClient(char *port, unsigned char *ciphertext)
     read_result = read(connfd, buff, sizeof(buff));  
 
     if(read_result>=0){
-        printf("Server received data");
+        printf("Server received data\n");
     }else{
-        printf("server failed to receive data");
+        printf("server failed to receive data\n");
         printf("error: %s\n",strerror(errno));
     }
 
     strcpy(ciphertext, buff);
+    printString(ciphertext, read_result);
 
     // After chatting close the socket 
     close(sockfd); 

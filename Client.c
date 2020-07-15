@@ -23,13 +23,16 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
                 unsigned char *iv, int iv_len,
                 unsigned char *ciphertext,
                 unsigned char *tag);
+void printString(const unsigned char *ciphertext_input, 
+                 const int ciphertext_len);
+
 void sendToServer(unsigned char *ciphertext, 
                   char *server_address);
 
 int main(int argc, char *argv[])
 {
     unsigned char plaintext[MAX];
-    unsigned char ciphertext[128];
+    unsigned char ciphertext[MAX];
 
     //second argument: file name
     int plaintext_len = readFile(argv[1], plaintext);
@@ -103,6 +106,7 @@ void encrypt(unsigned char* plaintext, unsigned char *ciphertext){
     if(ciphertext_len>=0){
       printf("Ciphertext is:\n");
       BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
+      printString(ciphertext, ciphertext_len);
     }else{
       printf("encryption failed");
       printf("error: %s\n",strerror(errno));
@@ -114,6 +118,7 @@ void handleErrors(void)
     ERR_print_errors_fp(stderr);
     abort();
 }
+
 
 int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
                 unsigned char *aad, int aad_len,
@@ -180,6 +185,14 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
     return ciphertext_len;
 }
 
+void printString(const unsigned char *ciphertext_input, const int ciphertext_len){
+    unsigned char ciphertext[MAX];
+    strcpy(ciphertext, ciphertext_input);
+
+    ciphertext[ciphertext_len]='\0';
+    printf("Ciphertext as string is:\n");
+    printf("%s\n", ciphertext);
+}
 
 void sendToServer(unsigned char *ciphertext, char *server_address){
     int sockfd, connfd; 
@@ -212,7 +225,7 @@ void sendToServer(unsigned char *ciphertext, char *server_address){
         printf("connected to the server..\n"); 
 
     // function for sending
-    int write_result = write(sockfd, ciphertext, sizeof(ciphertext)); 
+    int write_result = write(sockfd, ciphertext, strlen(ciphertext)); 
 
     if(write_result>=0){
         printf("Client sent data");

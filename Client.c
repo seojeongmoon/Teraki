@@ -101,6 +101,8 @@ void encrypt(unsigned char* plaintext, unsigned char *ciphertext){
                                  iv, iv_len,
                                  ciphertext, tag);
     if(ciphertext_len>=0){
+      printf("Ciphertext is:\n");
+      BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
     }else{
       printf("encryption failed");
       printf("error: %s\n",strerror(errno));

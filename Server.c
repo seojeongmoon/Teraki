@@ -176,6 +176,7 @@ int receiveFromClient(char *port, unsigned char *ciphertext)
 {
     int sockfd, connfd, len; 
     struct sockaddr_in servaddr, cli; 
+    unsigned char buff[MAX];
 
     // socket create and verification 
     sockfd = socket(AF_INET, SOCK_STREAM, 0); 
@@ -223,7 +224,8 @@ int receiveFromClient(char *port, unsigned char *ciphertext)
         printf("server acccept the client...\n"); 
 
     // read the message from client and copy it in ciphertext 
-    int read_result = read(connfd, ciphertext, sizeof(ciphertext));  
+    int read_result = -1;
+    read_result = read(connfd, buff, sizeof(buff));  
 
     if(read_result>=0){
         printf("Server received data");
@@ -232,8 +234,10 @@ int receiveFromClient(char *port, unsigned char *ciphertext)
         printf("error: %s\n",strerror(errno));
     }
 
+    strcpy(ciphertext, buff);
+
     // After chatting close the socket 
     close(sockfd); 
 
-    return strlen((char*) ciphertext);
+    return read_result;
 }

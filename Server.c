@@ -42,7 +42,7 @@ int main(int argc, char *argv[]){
     int ciphertext_len, decryptedtext_len;
     
     ciphertext_len = receiveFromClient(PORT, ciphertext, tag);
-
+    printString(tag, strlen(tag), "tag received in main");
     /* Buffer for the decrypted text */
  
     decryptedtext_len = decrypt(ciphertext, ciphertext_len, decryptedtext, tag);
@@ -66,9 +66,6 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *decryp
     /* Additional data */
     unsigned char *additional =
         (unsigned char *)"Accurate and efficient edge processing.";
-    
-    /* Buffer for the tag */
-    //unsigned char tag[16];
 
     int decryptedtext_len;
 
@@ -78,7 +75,6 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *decryp
                                     tag,
                                     key, iv, iv_len,
                                     decryptedtext);
-
     if(decryptedtext_len>=0){
         printf("Server decrypted successfully\n");
         printString(decryptedtext, decryptedtext_len, "decryptedtext");
@@ -147,19 +143,19 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
      * Finalise the decryption. A positive return value indicates success,
      * anything else is a failure - the plaintext is not trustworthy.
      */
-    //ret = EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
+    ret = EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
 
-    //printString(plaintext, plaintext_len+len, "plaintext inside gcm_decrypt");
-    //printString(ciphertext, ciphertext_len, "ciphertext inside gcm_decrypt");
+    /*printString(plaintext, plaintext_len+len, "plaintext inside gcm_decrypt");
+    printString(ciphertext, ciphertext_len, "ciphertext inside gcm_decrypt");
     
     //no clue why...
     unsigned char temp[MAX];
     strcpy(temp, plaintext);
     strcpy(plaintext, ciphertext);
-    strcpy(ciphertext, temp);
+    strcpy(ciphertext, temp);*/
 
-    printString(plaintext, plaintext_len+len, "plaintext inside gcm_decrypt");
-    printString(ciphertext, ciphertext_len, "ciphertext inside gcm_decrypt");
+    printString(plaintext, strlen(plaintext), "plaintext inside gcm_decrypt");
+    printString(ciphertext, strlen(ciphertext), "ciphertext inside gcm_decrypt");
     
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
@@ -247,7 +243,6 @@ int receiveFromClient(char *port, unsigned char *ciphertext, unsigned char *tag)
     if(read_result_ciphertext>0){
         printf("Server received data\n");
         strcpy(ciphertext, buff);
-        printString(ciphertext, read_result_ciphertext, "ciphertext");
     }else{
         printf("server failed to receive data\n");
         printf("error: %s\n",strerror(errno));

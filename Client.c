@@ -32,25 +32,81 @@ void sendToServer(unsigned char *ciphertext,
 
 int main(int argc, char *argv[])
 {
-    unsigned char plaintext[MAX];
-    unsigned char ciphertext[MAX];
+    //unsigned char plaintext[MAX];
+    //unsigned char ciphertext[MAX];
+    /* Buffer for the tag */
+    //unsigned char tag[16];
 
     //second argument: file name
-    int plaintext_len = readFile(argv[1], plaintext);
+    /*int plaintext_len;
+    plaintext_len = readFile(argv[1], plaintext);
 
-    if(plaintext_len<0){
-        printf("reading from file failed");
-    }
+    if(plaintext_len>=0){
+        printf("Server read the content of the file successfully\n");
+        printString(plaintext, plaintext_len, "plaintext");
+    }else{
+        printf("Server failed to read the content of the file\n");
+    }*/
+    /************************************************************************/
+    /*
+     * Set up the key and iv. Do I need to say to not hard code these in a
+     * real application? :-)
+     */
+
+    /* A 256 bit key */
+    unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
+
+    /* A 128 bit IV */
+    unsigned char *iv = (unsigned char *)"0123456789012345";
+    size_t iv_len = 16;
+
+    /* Message to be encrypted */
+    unsigned char *plaintext =
+        (unsigned char *)"The quick brown fox jumps over the lazy dog";
+
+    /* Additional data */
+    unsigned char *additional =
+        (unsigned char *)"The five boxing wizards jump quickly.";
+
+    /*
+     * Buffer for ciphertext. Ensure the buffer is long enough for the
+     * ciphertext which may be longer than the plaintext, depending on the
+     * algorithm and mode.
+     */
+    unsigned char ciphertext[128];
+
+    /* Buffer for the decrypted text */
+    unsigned char decryptedtext[128];
 
     /* Buffer for the tag */
     unsigned char tag[16];
 
+    int decryptedtext_len, ciphertext_len;
+
     //encrypt the ciphertext
-    encrypt(plaintext, ciphertext, tag);
+    //encrypt(plaintext, ciphertext, tag);
+
+    /* Encrypt the plaintext */
+    ciphertext_len = gcm_encrypt(plaintext, strlen ((char *)plaintext),
+                                 additional, strlen ((char *)additional),
+                                 key,
+                                 iv, iv_len,
+                                 ciphertext, tag);
+
+    /* Do something useful with the ciphertext here */
+    printf("Ciphertext is:\n");
+    BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
 
     printf("Tag is:\n");
     BIO_dump_fp (stdout, (const char *)tag, 16);
+    /************************************************************************/
 
+    printf("Tag is:\n");
+    BIO_dump_fp (stdout, (const char *)tag, 16);
+    printf("Tag is (all):\n");
+    BIO_dump_fp (stdout, (const char *)tag, strlen(tag));
+
+    printString(tag, strlen(tag), "tag after encryption in main");
     /* 
     * Send the ciphertext to server 
     * the third argument is server address
@@ -86,7 +142,9 @@ int readFile(char *fname,
     }
 }
 
-void encrypt(unsigned char* plaintext, unsigned char *ciphertext, unsigned char *tag)
+void encrypt(unsigned char* plaintext, 
+             unsigned char *ciphertext, 
+             unsigned char *tag)
 {
     /* Set up the key and iv. Do not hard code these in a real application. */
 
@@ -101,12 +159,6 @@ void encrypt(unsigned char* plaintext, unsigned char *ciphertext, unsigned char 
     unsigned char *additional =
         (unsigned char *)"Accurate and efficient edge processing.";
 
-    printf("Tag is:\n");
-    BIO_dump_fp (stdout, (const char *)tag, 16);
-
-
-    /* Buffer for the tag to the main function */
-
     int ciphertext_len;
 
     /* Encrypt the plaintext */
@@ -115,13 +167,15 @@ void encrypt(unsigned char* plaintext, unsigned char *ciphertext, unsigned char 
                                  key,
                                  iv, iv_len,
                                  ciphertext, tag);
+
     if(ciphertext_len>=0){
       printf("Ciphertext is:\n");
       BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
       printString(ciphertext, ciphertext_len, "ciphertext");
       printf("Tag is:\n");
-      BIO_dump_fp (stdout, (const char *)tag, 16);
-      printString(tag, 16, "tag");
+      BIO_dump_fp (stdout, (const char *)tag, strlen(tag));
+      //debug tag
+      printString(tag, strlen(tag), "tag after encrypt");
     }else{
       printf("encryption failed");
       printf("error: %s\n",strerror(errno));
@@ -197,7 +251,10 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
 
+    printString(tag, strlen(tag), "tag in gcm_encrypt");
+    
     return ciphertext_len;
+
 }
 
 void printString(const unsigned char *input, const int len, const char *name){
@@ -205,7 +262,7 @@ void printString(const unsigned char *input, const int len, const char *name){
     strcpy(buff, input);
 
     buff[len]='\0';
-    printf("As string, %s is: %s\n", name, buff);
+    printf("%s: %s\n", name, buff);
 }
 
 void sendToServer(unsigned char *ciphertext, unsigned char *tag,  char *server_address)

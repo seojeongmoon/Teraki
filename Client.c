@@ -12,31 +12,8 @@
 #define PORT 8080
 #define SA struct sockaddr 
 
-
 int readFromGivenFile(char *fname, 
-             unsigned char* plaintext)
-{
-    //Read File
-    FILE *fp;
-    /* Open the file of passed file name */
-    fp  = fopen(fname, "r");
-    if(fp == NULL)
-    {
-        printf("failed to read from the file %s\n", fname);
-        return -1;
-    }
-    /* Read the message to be encrypted */
-    fgets(plaintext, MAX, fp); 
-    fclose (fp);
-
-    int plaintext_len = strlen((char *)plaintext);
-
-    if(plaintext_len>0){
-        return plaintext_len;
-    }else {
-        return -1;
-    }
-}
+             unsigned char* plaintext);
 void encrypt(unsigned char *plaintext,
              unsigned char *ciphertext,
              unsigned char *tag);
@@ -55,28 +32,7 @@ void sendToServer(unsigned char *ciphertext,
 
 int main(int argc, char *argv[])
 {
-
-    //unsigned char plaintext[MAX];
-    //unsigned char ciphertext[MAX];
-    /* Buffer for the tag */
-    //unsigned char tag[16];
-
-    //second argument: file name
-    /*int plaintext_len;
-    plaintext_len = readFile(argv[1], plaintext);
-
-    if(plaintext_len>=0){
-        printf("Server read the content of the file successfully\n");
-        printString(plaintext, plaintext_len, "plaintext");
-    }else{
-        printf("Server failed to read the content of the file\n");
-    }*/
-    /************************************************************************/
-    /*
-     * Set up the key and iv. Do I need to say to not hard code these in a
-     * real application? :-)
-     */
-
+    /*In application, never hardcode the key and IV!*/
     /* A 256 bit key */
     unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
 
@@ -85,25 +41,19 @@ int main(int argc, char *argv[])
     size_t iv_len = 16;
 
     /* Message to be encrypted */
-    //unsigned char *plaintext =
-    //    (unsigned char *)"The quick brown fox jumps over the lazy dog";
     unsigned char *plaintext;
-    if(argc>1){
-    char *text;
-    char *filetext;
-    text = (char *) malloc(MAX);
-    filetext = (char *) malloc(MAX);
-    int filetext_len;
+    plaintext = (unsigned char *) malloc(MAX);
+    
+    int plaintext_len;
 
-    filetext_len = readFromGivenFile(argv[1], filetext);
-    plaintext = (unsigned char*) filetext;
-    printf("plaintext: %s", plaintext);
-    free(text);
-    free(filetext);
+    plaintext_len = readFromGivenFile(argv[1], plaintext);
+    if(plaintext_len>=0){
+        printf("Server read the content of the file successfully\n");    
+        printf("plaintext: %s\n", plaintext);
+    }else{
+        printf("Server failed to read the content of the file\n");
+        abort();
     }
-
-        printf("plaintext: %s", plaintext);
-
 
     /* Additional data */
     unsigned char *additional =
@@ -128,7 +78,7 @@ int main(int argc, char *argv[])
     //encrypt(plaintext, ciphertext, tag);
 
     /* Encrypt the plaintext */
-    ciphertext_len = gcm_encrypt(plaintext, strlen ((char *)plaintext),
+    ciphertext_len = gcm_encrypt(plaintext, plaintext_len,
                                  additional, strlen ((char *)additional),
                                  key,
                                  iv, iv_len,
@@ -159,6 +109,30 @@ int main(int argc, char *argv[])
 }
 
 
+int readFromGivenFile(char *fname, 
+             unsigned char* plaintext)
+{
+    //Read File
+    FILE *fp;
+    /* Open the file of passed file name */
+    fp  = fopen(fname, "r");
+    if(fp == NULL)
+    {
+        printf("failed to read from the file %s\n", fname);
+        return -1;
+    }
+    /* Read the message to be encrypted */
+    fgets(plaintext, MAX, fp); 
+    fclose (fp);
+
+    int plaintext_len = strlen((char *)plaintext);
+
+    if(plaintext_len>0){
+        return plaintext_len;
+    }else {
+        return -1;
+    }
+}
 
 void encrypt(unsigned char* plaintext, 
              unsigned char *ciphertext, 

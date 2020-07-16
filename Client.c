@@ -12,8 +12,31 @@
 #define PORT 8080
 #define SA struct sockaddr 
 
-int readFile(char *fname, 
-             unsigned char *plaintext);
+
+int readFromGivenFile(char *fname, 
+             unsigned char* plaintext)
+{
+    //Read File
+    FILE *fp;
+    /* Open the file of passed file name */
+    fp  = fopen(fname, "r");
+    if(fp == NULL)
+    {
+        printf("failed to read from the file %s\n", fname);
+        return -1;
+    }
+    /* Read the message to be encrypted */
+    fgets(plaintext, MAX, fp); 
+    fclose (fp);
+
+    int plaintext_len = strlen((char *)plaintext);
+
+    if(plaintext_len>0){
+        return plaintext_len;
+    }else {
+        return -1;
+    }
+}
 void encrypt(unsigned char *plaintext,
              unsigned char *ciphertext,
              unsigned char *tag);
@@ -32,6 +55,7 @@ void sendToServer(unsigned char *ciphertext,
 
 int main(int argc, char *argv[])
 {
+
     //unsigned char plaintext[MAX];
     //unsigned char ciphertext[MAX];
     /* Buffer for the tag */
@@ -61,8 +85,25 @@ int main(int argc, char *argv[])
     size_t iv_len = 16;
 
     /* Message to be encrypted */
-    unsigned char *plaintext =
-        (unsigned char *)"The quick brown fox jumps over the lazy dog";
+    //unsigned char *plaintext =
+    //    (unsigned char *)"The quick brown fox jumps over the lazy dog";
+    unsigned char *plaintext;
+    if(argc>1){
+    char *text;
+    char *filetext;
+    text = (char *) malloc(MAX);
+    filetext = (char *) malloc(MAX);
+    int filetext_len;
+
+    filetext_len = readFromGivenFile(argv[1], filetext);
+    plaintext = (unsigned char*) filetext;
+    printf("plaintext: %s", plaintext);
+    free(text);
+    free(filetext);
+    }
+
+        printf("plaintext: %s", plaintext);
+
 
     /* Additional data */
     unsigned char *additional =
@@ -117,30 +158,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-int readFile(char *fname, 
-             unsigned char* plaintext)
-{
-    //Read File
-    FILE *fp;
-    /* Open the file of passed file name */
-    fp  = fopen(fname, "r");
-    if(fp == NULL)
-    {
-        printf("failed to read from the file %s\n", fname);
-        return -1;
-    }
-    /* Read the message to be encrypted */
-    fgets(plaintext, MAX, fp); 
-    fclose (fp);
 
-    int plaintext_len = strlen((char *)plaintext);
-
-    if(plaintext_len>0){
-        return plaintext_len;
-    }else {
-        return -1;
-    }
-}
 
 void encrypt(unsigned char* plaintext, 
              unsigned char *ciphertext, 
@@ -284,8 +302,8 @@ void sendToServer(unsigned char *ciphertext, unsigned char *tag,  char *server_a
 
     // assign IP, PORT 
     servaddr.sin_family = AF_INET; 
-    //servaddr.sin_addr.s_addr = inet_addr(server_address); 
-    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
+    servaddr.sin_addr.s_addr = inet_addr(server_address); 
+    //servaddr.sin_addr.s_addr = inet_addr("127.0.0.1"); 
     servaddr.sin_port = htons(PORT); 
 
     // connect the client socket to server socket 

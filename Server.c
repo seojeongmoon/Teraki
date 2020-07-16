@@ -12,7 +12,6 @@
 
 #define SA struct sockaddr 
 #define MAX 128
-#define PORT 8080
 
 void handleErrors(void);
 int decrypt(unsigned char *ciphertext, 
@@ -34,6 +33,14 @@ int receiveFromClient(char *port,
                       unsigned char *tag);
 
 int main(int argc, char *argv[]){
+
+    int PORT;
+    if(argc>1){
+        PORT = atoi(argv[1]);
+    }else{
+        printf("argument not read");
+        PORT=8080;
+    }
    
     /* Buffer for the ciphertext*/
     unsigned char ciphertext[MAX];

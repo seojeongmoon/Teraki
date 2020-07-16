@@ -12,6 +12,7 @@ $(TARGET) : $(OBJS)
 	
 EXE : $(TARGET)
 	./$(TARGET) $(F_NAME) $(S_ADDR)
+	#save
 	
 #clean all object files and executable file TARGET
 .PHONY: clean

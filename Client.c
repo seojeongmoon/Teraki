@@ -78,7 +78,8 @@ int readFile(char *fname,
     }
 }
 
-void encrypt(unsigned char* plaintext, unsigned char *ciphertext){
+void encrypt(unsigned char* plaintext, unsigned char *ciphertext)
+{
     /* Set up the key and iv. Do not hard code these in a real application. */
 
     /* A 256 bit key */
@@ -95,6 +96,10 @@ void encrypt(unsigned char* plaintext, unsigned char *ciphertext){
     /* Buffer for the tag */
     unsigned char tag[16];
 
+    printf("Tag is:\n");
+    BIO_dump_fp (stdout, (const char *)tag, 16);
+
+
     int ciphertext_len;
 
     /* Encrypt the plaintext */
@@ -107,6 +112,9 @@ void encrypt(unsigned char* plaintext, unsigned char *ciphertext){
       printf("Ciphertext is:\n");
       /*BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
       printString(ciphertext, ciphertext_len);*/
+      printf("Tag is:\n");
+      BIO_dump_fp (stdout, (const char *)tag, 16);
+      printString(tag, 16);
     }else{
       printf("encryption failed");
       printf("error: %s\n",strerror(errno));

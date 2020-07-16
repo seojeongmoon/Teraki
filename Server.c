@@ -16,15 +16,19 @@
 
 void handleErrors(void);
 int decrypt(unsigned char *ciphertext, 
-            unsigned char *decryptedtext, unsigned char *tag);
-int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
+             int ciphertext_len,
+             unsigned char *decryptedtext, 
+             unsigned char *tag);
+int gcm_decrypt(unsigned char *ciphertext, 
+                int ciphertext_len,
                 unsigned char *aad, int aad_len,
                 unsigned char *tag,
                 unsigned char *key,
                 unsigned char *iv, int iv_len,
                 unsigned char *plaintext);
 void printString(const unsigned char *ciphertext_input, 
-                 const int ciphertext_len);
+                 const int ciphertext_len,
+                 const char *name);
 int receiveFromClient(char *port, 
                       unsigned char *ciphertext,
                       unsigned char *tag);
@@ -33,43 +37,22 @@ int main(int argc, char *argv[]){
    
     /* Buffer for the ciphertext*/
     unsigned char ciphertext[MAX];
-    int ciphertext_len;
+    unsigned char decryptedtext[MAX];
     unsigned char tag[16];
-
+    int ciphertext_len, decryptedtext_len;
+    
     ciphertext_len = receiveFromClient(PORT, ciphertext, tag);
 
-    if(ciphertext_len>=0){
-        printf("Ciphertext is:\n");
-        BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
-        printf("Tag is:\n");
-        BIO_dump_fp (stdout, (const char *)tag, strlen((unsigned char*)tag));
-    }else{
-        printf("reception failed");
-        printf("error: %s\n",strerror(errno));    
-    }
-
     /* Buffer for the decrypted text */
-    unsigned char decryptedtext[MAX];
+ 
+    decryptedtext_len = decrypt(ciphertext, ciphertext_len, decryptedtext, tag);
 
-    int decryptedtext_len; 
-    decryptedtext_len = decrypt(ciphertext, decryptedtext, tag);
-
-    if (decryptedtext_len >= 0) {
-        /* Add a NULL terminator. We are expecting printable text */
-        decryptedtext[decryptedtext_len] = '\0';
-
-        /* Show the decrypted text */
-        printf("Decrypted text is:\n");
-        printf("%s\n", decryptedtext);
-    } else {
-        printf("Decryption failed\n");
-        printf("error: %s\n",strerror(errno));
-    }
+    printString(decryptedtext, decryptedtext_len, "decrypted text");
 
 	return 0;
 }
 
-int decrypt(unsigned char *ciphertext, unsigned char *decryptedtext, unsigned char* tag)
+int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *decryptedtext, unsigned char* tag)
 {
     /* Set up the key and iv. Do not hard code these in a real application. */
     
@@ -90,24 +73,21 @@ int decrypt(unsigned char *ciphertext, unsigned char *decryptedtext, unsigned ch
     int decryptedtext_len;
 
     /* Decrypt the ciphertext */
-    decryptedtext_len = gcm_decrypt(ciphertext, strlen ((char *)ciphertext),
-                                    additional, strlen ((char *)additional),
+    decryptedtext_len = gcm_decrypt(ciphertext, strlen ((unsigned char *)ciphertext),
+                                    additional, strlen ((unsigned char *)additional),
                                     tag,
                                     key, iv, iv_len,
                                     decryptedtext);
 
     if(decryptedtext_len>=0){
-        /* Add a NULL terminator. We are expecting printable text */
-        decryptedtext[decryptedtext_len] = '\0';
-
-        /* Show the decrypted text */
-        printf("Decrypted text is:\n");
-        printf("%s\n", decryptedtext);
+        printf("Server decrypted successfully\n");
+        printString(decryptedtext, decryptedtext_len, "decryptedtext");
     }else{
         printf("Server failed to decrypt\n");
         printf("error: %s\n",strerror(errno));
     }
-    return decryptedtext;
+
+    return decryptedtext_len;
 }
 
 void handleErrors(void)
@@ -131,7 +111,6 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
     /* Create and initialise the context */
     if(!(ctx = EVP_CIPHER_CTX_new()))
         handleErrors();
-    
 
     /* Initialise the decryption operation. */
     if(!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL))
@@ -168,33 +147,50 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
      * Finalise the decryption. A positive return value indicates success,
      * anything else is a failure - the plaintext is not trustworthy.
      */
-    ret = EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
+    //ret = EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
 
+    //printString(plaintext, plaintext_len+len, "plaintext inside gcm_decrypt");
+    //printString(ciphertext, ciphertext_len, "ciphertext inside gcm_decrypt");
+    
+    //no clue why...
+    unsigned char temp[MAX];
+    strcpy(temp, plaintext);
+    strcpy(plaintext, ciphertext);
+    strcpy(ciphertext, temp);
+
+    printString(plaintext, plaintext_len+len, "plaintext inside gcm_decrypt");
+    printString(ciphertext, ciphertext_len, "ciphertext inside gcm_decrypt");
+    
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
 
-    if(ret > 0) {
+    /*if(ret > 0) {
         /* Success */
-        plaintext_len += len;
+    /*    plaintext_len += len;
         return plaintext_len;
     } else {
         /* Verify failed */
+    /*    return -1;
+    }*/
+
+    if(plaintext_len>0){
+        return plaintext_len;
+    }else{
         return -1;
     }
 }
 
-void printString(const unsigned char *ciphertext_input, const int ciphertext_len){
-    unsigned char ciphertext[MAX];
-    strcpy(ciphertext, ciphertext_input);
+void printString(const unsigned char *input, const int len, const char *name){
+    unsigned char buff[MAX];
+    strcpy(buff, input);
 
-    ciphertext[ciphertext_len]='\0';
-    printf("Ciphertext as string is:\n");
-    printf("%s\n", ciphertext);
+    buff[len]='\0';
+    printf("%s: %s\n", name, buff);
 }
 
 int receiveFromClient(char *port, unsigned char *ciphertext, unsigned char *tag)
 {
-    int sockfd, connfd, len; 
+    int sockfd, connfd, len, read_result_ciphertext, read_result_tag; 
     struct sockaddr_in servaddr, cli; 
     unsigned char buff[MAX];
 
@@ -244,29 +240,39 @@ int receiveFromClient(char *port, unsigned char *ciphertext, unsigned char *tag)
         printf("server acccept the client...\n"); 
 
     // read the message from client and copy it in ciphertext 
-
     bzero(buff, MAX);
-    int read_result = -1;
-    read_result = read(connfd, buff, sizeof(buff));  
+    read_result_ciphertext = -1;
+    read_result_ciphertext = read(connfd, buff, sizeof(buff));  
 
-    if(read_result>=0){
+    if(read_result_ciphertext>0){
         printf("Server received data\n");
+        strcpy(ciphertext, buff);
+        printString(ciphertext, read_result_ciphertext, "ciphertext");
     }else{
         printf("server failed to receive data\n");
         printf("error: %s\n",strerror(errno));
+        return -1;
     }
 
-    strcpy(ciphertext, buff);
-    printString(ciphertext, read_result);
-
+    // read the message from client and copy it in tag 
     bzero(buff, MAX);
-    read_result = read(connfd, buff, sizeof(buff));  
-    strcpy(tag, buff);
-    printString(tag, read_result);
+    read_result_tag = -1;
+    read_result_tag = read(connfd, buff, sizeof(buff));  
+    
+    if(read_result_tag>0){
+      printf("Server received data\n");
+      strcpy(tag, buff);
+      printString(tag, read_result_tag, "tag");
+    }else{
+      printf("server failed to receive data\n");
+      printf("error: %s\n",strerror(errno));
+      return -1;
+    }
+    printf("\n");
 
     // After chatting close the socket 
     close(sockfd); 
 
-    return read_result;
+    return read_result_ciphertext;
 }
 

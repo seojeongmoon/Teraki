@@ -25,8 +25,7 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
                 unsigned char *ciphertext,
                 unsigned char *tag);
 void printString(const unsigned char *input, 
-                 const int len);
-
+                 const int len, const char *name);
 void sendToServer(unsigned char *ciphertext, 
                   unsigned char *tag,
                   char *server_address);
@@ -119,10 +118,10 @@ void encrypt(unsigned char* plaintext, unsigned char *ciphertext, unsigned char 
     if(ciphertext_len>=0){
       printf("Ciphertext is:\n");
       BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
-      printString(ciphertext, ciphertext_len);
+      printString(ciphertext, ciphertext_len, "ciphertext");
       printf("Tag is:\n");
       BIO_dump_fp (stdout, (const char *)tag, 16);
-      printString(tag, 16);
+      printString(tag, 16, "tag");
     }else{
       printf("encryption failed");
       printf("error: %s\n",strerror(errno));
@@ -201,14 +200,12 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
     return ciphertext_len;
 }
 
-void printString(const unsigned char *input, const int len)
-{
+void printString(const unsigned char *input, const int len, const char *name){
     unsigned char buff[MAX];
     strcpy(buff, input);
 
     buff[len]='\0';
-    printf("As string, it is:\n");
-    printf("%s\n", buff);
+    printf("As string, %s is: %s\n", name, buff);
 }
 
 void sendToServer(unsigned char *ciphertext, unsigned char *tag,  char *server_address)

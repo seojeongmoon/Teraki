@@ -26,114 +26,8 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
 void printString(const unsigned char *ciphertext_input, 
                  const int ciphertext_len);
 int receiveFromClient(char *port, 
-                      unsigned char *ciphertext);
-void encrypt(unsigned char* plaintext, unsigned char *ciphertext, unsigned char *tag)
-{
-    /* Set up the key and iv. Do not hard code these in a real application. */
-
-    /* A 256 bit key */
-    unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
-
-    /* A 128 bit IV */
-    unsigned char *iv = (unsigned char *)"0123456789012345";
-    size_t iv_len = 16;
-
-    /* Additional data */
-    unsigned char *additional =
-        (unsigned char *)"Accurate and efficient edge processing.";
-
-    /* Buffer for the tag */
-    //unsigned char tag[16];
-
-    printf("Tag is:\n");
-    BIO_dump_fp (stdout, (const char *)tag, 16);
-
-
-    int ciphertext_len;
-
-    /* Encrypt the plaintext */
-    ciphertext_len = gcm_encrypt(plaintext, strlen ((char *)plaintext),
-                                 additional, strlen ((char *)additional),
-                                 key,
-                                 iv, iv_len,
-                                 ciphertext, tag);
-    if(ciphertext_len>=0){
-      printf("Ciphertext is:\n");
-      /*BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
-      printString(ciphertext, ciphertext_len);*/
-      printf("Tag is:\n");
-      BIO_dump_fp (stdout, (const char *)tag, 16);
-      printString(tag, 16);
-    }else{
-      printf("encryption failed");
-      printf("error: %s\n",strerror(errno));
-    }
-}
-
-int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
-                unsigned char *aad, int aad_len,
-                unsigned char *key,
-                unsigned char *iv, int iv_len,
-                unsigned char *ciphertext,
-                unsigned char *tag)
-{
-    EVP_CIPHER_CTX *ctx;
-
-    int len;
-
-    int ciphertext_len;
-
-
-    /* Create and initialise the context */
-    if(!(ctx = EVP_CIPHER_CTX_new()))
-        handleErrors();
-
-    /* Initialise the encryption operation. */
-    if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL))
-        handleErrors();
-
-    /*
-     * Set IV length if default 12 bytes (96 bits) is not appropriate
-     */
-    if(1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, iv_len, NULL))
-        handleErrors();
-
-    /* Initialise key and IV */
-    if(1 != EVP_EncryptInit_ex(ctx, NULL, NULL, key, iv))
-        handleErrors();
-
-    /*
-     * Provide any AAD data. This can be called zero or more times as
-     * required
-     */
-    if(1 != EVP_EncryptUpdate(ctx, NULL, &len, aad, aad_len))
-        handleErrors();
-
-    /*
-     * Provide the message to be encrypted, and obtain the encrypted output.
-     * EVP_EncryptUpdate can be called multiple times if necessary
-     */
-    if(1 != EVP_EncryptUpdate(ctx, ciphertext, &len, plaintext, plaintext_len))
-        handleErrors();
-    ciphertext_len = len;
-
-    /*
-     * Finalise the encryption. Normally ciphertext bytes may be written at
-     * this stage, but this does not occur in GCM mode
-     */
-    if(1 != EVP_EncryptFinal_ex(ctx, ciphertext + len, &len))
-        handleErrors();
-    ciphertext_len += len;
-
-    /* Get the tag */
-    if(1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 16, tag))
-        handleErrors();
-
-    /* Clean up */
-    EVP_CIPHER_CTX_free(ctx);
-
-    return ciphertext_len;
-}
+                      unsigned char *ciphertext,
+                      unsigned char *tag);
 
 int main(int argc, char *argv[]){
    
@@ -142,21 +36,13 @@ int main(int argc, char *argv[]){
     int ciphertext_len;
     unsigned char tag[16];
 
-    unsigned char plaintext[MAX];
-    //unsigned char ciphertext[MAX];
-
-    *plaintext ="Yes";
-    int plaintext_len = strlen((unsigned char*) plaintext);
-
-    //encrypt the ciphertext
-    encrypt(plaintext, ciphertext, tag);
-
-    //ciphertext_len = receiveFromClient(PORT, ciphertext);
-    ciphertext_len = strlen((unsigned char*) ciphertext);
+    ciphertext_len = receiveFromClient(PORT, ciphertext, tag);
 
     if(ciphertext_len>=0){
         printf("Ciphertext is:\n");
         BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
+        printf("Tag is:\n");
+        BIO_dump_fp (stdout, (const char *)tag, strlen((unsigned char*)tag));
     }else{
         printf("reception failed");
         printf("error: %s\n",strerror(errno));    
@@ -183,7 +69,8 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-int decrypt(unsigned char *ciphertext, unsigned char *decryptedtext, unsigned char* tag){
+int decrypt(unsigned char *ciphertext, unsigned char *decryptedtext, unsigned char* tag)
+{
     /* Set up the key and iv. Do not hard code these in a real application. */
     
     /* A 256 bit key */
@@ -245,6 +132,7 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
     if(!(ctx = EVP_CIPHER_CTX_new()))
         handleErrors();
     
+
     /* Initialise the decryption operation. */
     if(!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL))
         handleErrors();
@@ -304,7 +192,7 @@ void printString(const unsigned char *ciphertext_input, const int ciphertext_len
     printf("%s\n", ciphertext);
 }
 
-int receiveFromClient(char *port, unsigned char *ciphertext)
+int receiveFromClient(char *port, unsigned char *ciphertext, unsigned char *tag)
 {
     int sockfd, connfd, len; 
     struct sockaddr_in servaddr, cli; 
@@ -356,6 +244,8 @@ int receiveFromClient(char *port, unsigned char *ciphertext)
         printf("server acccept the client...\n"); 
 
     // read the message from client and copy it in ciphertext 
+
+    bzero(buff, MAX);
     int read_result = -1;
     read_result = read(connfd, buff, sizeof(buff));  
 
@@ -368,6 +258,11 @@ int receiveFromClient(char *port, unsigned char *ciphertext)
 
     strcpy(ciphertext, buff);
     printString(ciphertext, read_result);
+
+    bzero(buff, MAX);
+    read_result = read(connfd, buff, sizeof(buff));  
+    strcpy(tag, buff);
+    printString(tag, read_result);
 
     // After chatting close the socket 
     close(sockfd); 

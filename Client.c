@@ -15,7 +15,8 @@
 int readFile(char *fname, 
              unsigned char *plaintext);
 void encrypt(unsigned char *plaintext,
-             unsigned char *ciphertext);
+             unsigned char *ciphertext,
+             unsigned char *tag);
 void handleErrors(void);
 int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
                 unsigned char *aad, int aad_len,
@@ -23,10 +24,11 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
                 unsigned char *iv, int iv_len,
                 unsigned char *ciphertext,
                 unsigned char *tag);
-void printString(const unsigned char *ciphertext_input, 
-                 const int ciphertext_len);
+void printString(const unsigned char *input, 
+                 const int len);
 
 void sendToServer(unsigned char *ciphertext, 
+                  unsigned char *tag,
                   char *server_address);
 
 int main(int argc, char *argv[])
@@ -41,21 +43,28 @@ int main(int argc, char *argv[])
         printf("reading from file failed");
     }
 
+    /* Buffer for the tag */
+    unsigned char tag[16];
+
     //encrypt the ciphertext
-    encrypt(plaintext, ciphertext);
+    encrypt(plaintext, ciphertext, tag);
+
+    printf("Tag is:\n");
+    BIO_dump_fp (stdout, (const char *)tag, 16);
 
     /* 
     * Send the ciphertext to server 
     * the third argument is server address
     */
-    sendToServer(ciphertext, argv[2]);
+    sendToServer(ciphertext, tag, argv[2]);
     //sendToServer(ciphertext,"127.0.0.1");
 
     return 0;
 }
 
 int readFile(char *fname, 
-             unsigned char* plaintext){
+             unsigned char* plaintext)
+{
     //Read File
     FILE *fp;
     /* Open the file of passed file name */
@@ -78,7 +87,7 @@ int readFile(char *fname,
     }
 }
 
-void encrypt(unsigned char* plaintext, unsigned char *ciphertext)
+void encrypt(unsigned char* plaintext, unsigned char *ciphertext, unsigned char *tag)
 {
     /* Set up the key and iv. Do not hard code these in a real application. */
 
@@ -93,12 +102,11 @@ void encrypt(unsigned char* plaintext, unsigned char *ciphertext)
     unsigned char *additional =
         (unsigned char *)"Accurate and efficient edge processing.";
 
-    /* Buffer for the tag */
-    unsigned char tag[16];
-
     printf("Tag is:\n");
     BIO_dump_fp (stdout, (const char *)tag, 16);
 
+
+    /* Buffer for the tag to the main function */
 
     int ciphertext_len;
 
@@ -110,8 +118,8 @@ void encrypt(unsigned char* plaintext, unsigned char *ciphertext)
                                  ciphertext, tag);
     if(ciphertext_len>=0){
       printf("Ciphertext is:\n");
-      /*BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
-      printString(ciphertext, ciphertext_len);*/
+      BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
+      printString(ciphertext, ciphertext_len);
       printf("Tag is:\n");
       BIO_dump_fp (stdout, (const char *)tag, 16);
       printString(tag, 16);
@@ -193,16 +201,18 @@ int gcm_encrypt(unsigned char *plaintext, int plaintext_len,
     return ciphertext_len;
 }
 
-void printString(const unsigned char *ciphertext_input, const int ciphertext_len){
-    unsigned char ciphertext[MAX];
-    strcpy(ciphertext, ciphertext_input);
+void printString(const unsigned char *input, const int len)
+{
+    unsigned char buff[MAX];
+    strcpy(buff, input);
 
-    ciphertext[ciphertext_len]='\0';
-    printf("Ciphertext as string is:\n");
-    printf("%s\n", ciphertext);
+    buff[len]='\0';
+    printf("As string, it is:\n");
+    printf("%s\n", buff);
 }
 
-void sendToServer(unsigned char *ciphertext, char *server_address){
+void sendToServer(unsigned char *ciphertext, unsigned char *tag,  char *server_address)
+{
     int sockfd, connfd; 
     struct sockaddr_in servaddr, cli; 
 
@@ -236,9 +246,21 @@ void sendToServer(unsigned char *ciphertext, char *server_address){
     int write_result = write(sockfd, ciphertext, strlen(ciphertext)); 
 
     if(write_result>=0){
-        printf("Client sent data");
+        printf("Client sent ciphertext data");
     }else{
-        printf("Client failed to send data");
+        printf("Client failed to send cipehrtext data");
+        printf("error: %s\n",strerror(errno));
+    }
+    
+    while (getchar() != '\n'); 
+    
+    write_result = -1;
+    write_result = write(sockfd, tag, strlen(tag)); 
+
+    if(write_result>=0){
+        printf("Client sent tag data");
+    }else{
+        printf("Client failed to send tag data");
         printf("error: %s\n",strerror(errno));
     }
 

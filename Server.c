@@ -44,14 +44,17 @@ int main(int argc, char *argv[]){
    
     /* Buffer for the ciphertext*/
     unsigned char ciphertext[MAX];
+
+    /* Buffer for the decrypted text */
     unsigned char decryptedtext[MAX];
+
     unsigned char tag[16];
+
     int ciphertext_len, decryptedtext_len;
     
+    //receive ciphertext and tag from the client
     ciphertext_len = receiveFromClient(PORT, ciphertext, tag);
-    printString(tag, strlen(tag), "tag received in main");
-    /* Buffer for the decrypted text */
- 
+    
     decryptedtext_len = decrypt(ciphertext, ciphertext_len, decryptedtext, tag);
 
     printString(decryptedtext, decryptedtext_len, "decrypted text");
@@ -84,10 +87,8 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *decryp
                                     decryptedtext);
     if(decryptedtext_len>=0){
         printf("Server decrypted successfully\n");
-        printString(decryptedtext, decryptedtext_len, "decryptedtext");
     }else{
         printf("Server failed to decrypt\n");
-        printf("error: %s\n",strerror(errno));
     }
 
     return decryptedtext_len;
@@ -152,21 +153,10 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
      */
     ret = EVP_DecryptFinal_ex(ctx, plaintext + len, &len);
 
-    /*printString(plaintext, plaintext_len+len, "plaintext inside gcm_decrypt");
-    printString(ciphertext, ciphertext_len, "ciphertext inside gcm_decrypt");
-    
-    //no clue why...
-    unsigned char temp[MAX];
-    strcpy(temp, plaintext);
-    strcpy(plaintext, ciphertext);
-    strcpy(ciphertext, temp);*/
-
-    printString(plaintext, strlen(plaintext), "plaintext inside gcm_decrypt");
-    printString(ciphertext, strlen(ciphertext), "ciphertext inside gcm_decrypt");
-    
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
 
+    //ret is always 0
     /*if(ret > 0) {
         /* Success */
     /*    plaintext_len += len;
@@ -248,10 +238,10 @@ int receiveFromClient(char *port, unsigned char *ciphertext, unsigned char *tag)
     read_result_ciphertext = read(connfd, buff, sizeof(buff));  
 
     if(read_result_ciphertext>0){
-        printf("Server received data\n");
+        printf("Server received ciphertext\n");
         strcpy(ciphertext, buff);
     }else{
-        printf("server failed to receive data\n");
+        printf("server failed to receive ciphertext\n");
         printf("error: %s\n",strerror(errno));
         return -1;
     }
@@ -262,11 +252,10 @@ int receiveFromClient(char *port, unsigned char *ciphertext, unsigned char *tag)
     read_result_tag = read(connfd, buff, sizeof(buff));  
     
     if(read_result_tag>0){
-      printf("Server received data\n");
+      printf("Server received tag\n");
       strcpy(tag, buff);
-      printString(tag, read_result_tag, "tag");
     }else{
-      printf("server failed to receive data\n");
+      printf("server failed to receive tag\n");
       printf("error: %s\n",strerror(errno));
       return -1;
     }

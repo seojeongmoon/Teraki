@@ -1,3 +1,14 @@
+/*
+*
+* @brief: Code to create and connect client socket on TCP network, 
+* read the file from the text, encrypts the content, 
+* then send the ciphertext to the server
+*
+* @author: Seojeong Moon
+* @version: 2020-7-16
+*
+*/
+
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>

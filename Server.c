@@ -1,3 +1,14 @@
+/*
+*
+* @brief: Code to create and connect server socket on TCP network, 
+* receive the ciphertext from the client, decrypts the content, 
+* then print the plaintext
+*
+* @author: Seojeong Moon
+* @version: 2020-7-16
+*
+*/
+
 #include <openssl/conf.h>
 #include <openssl/evp.h>
 #include <openssl/err.h>

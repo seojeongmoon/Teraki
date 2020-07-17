@@ -43,14 +43,6 @@ void sendToServer(unsigned char *ciphertext,
 
 int main(int argc, char *argv[])
 {
-    /*In application, never hardcode the key and IV!*/
-    /* A 256 bit key */
-    unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
-
-    /* A 128 bit IV */
-    unsigned char *iv = (unsigned char *)"0123456789012345";
-    size_t iv_len = 16;
-
     /* Message to be encrypted */
     unsigned char *plaintext;
     plaintext = (unsigned char *) malloc(MAX);
@@ -60,16 +52,14 @@ int main(int argc, char *argv[])
     /* Read from the file of which name is the second argument*/
     plaintext_len = readFromGivenFile(argv[1], plaintext);
     if(plaintext_len>=0){
-        printf("Server read the content of the file successfully\n");    
+        printf("Server read the content of the file successfully\n"); 
+        printString(plaintext, plaintext_len, "plaintext read from file");
+        printf("\n");
     }else{
         printf("Server failed to read the content of the file\n");
         printf("error: %s\n",strerror(errno));
         abort();
     }
-
-    /* Additional data */
-    unsigned char *additional =
-        (unsigned char *)"Accurate and efficient edge processing.";
 
     /*
      * Buffer for ciphertext. Ensure the buffer is long enough for the
@@ -78,30 +68,11 @@ int main(int argc, char *argv[])
      */
     unsigned char ciphertext[128];
 
-    /* Buffer for the decrypted text */
-    unsigned char decryptedtext[128];
-
     /* Buffer for the tag */
     unsigned char tag[16];
 
-    int decryptedtext_len, ciphertext_len;
+    encrypt(plaintext, ciphertext, tag);
 
-    //encrypt the ciphertext
-    //encrypt(plaintext, ciphertext, tag);
-
-    /* Encrypt the plaintext */
-    ciphertext_len = gcm_encrypt(plaintext, plaintext_len,
-                                 additional, strlen ((char *)additional),
-                                 key,
-                                 iv, iv_len,
-                                 ciphertext, tag);
-
-    if(ciphertext_len>=0){
-        printf("Server encrypted successfully\n");
-        printf("\n");
-    }else{
-        printf("Server failed to encrypt\n");
-    }
     /* 
     * Send the ciphertext to server 
     * the third argument is server address
@@ -109,6 +80,45 @@ int main(int argc, char *argv[])
     sendToServer(ciphertext, tag, argv[2]);
 
     return 0;
+}
+
+void encrypt(unsigned char* plaintext, 
+             unsigned char *ciphertext, 
+             unsigned char *tag)
+{
+    /*In application, never hardcode the key and IV!*/
+    /* A 256 bit key */
+    unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
+
+    /* A 128 bit IV */
+    unsigned char *iv = (unsigned char *)"0123456789012345";
+    size_t iv_len = 16;
+
+    /* Additional data */
+    unsigned char *additional =
+        (unsigned char *)"Accurate and efficient edge processing.";
+
+    int ciphertext_len;
+
+    /* Encrypt the plaintext */
+    ciphertext_len = gcm_encrypt(plaintext, strlen ((char *)plaintext),
+                                 additional, strlen ((char *)additional),
+                                 key,
+                                 iv, iv_len,
+                                 ciphertext, tag);
+
+    if(ciphertext_len>=0){
+        printf("Server encrypted successfully\n");
+        //printf("Ciphertext is:\n");
+        //BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
+        printString(ciphertext, ciphertext_len, "ciphertext");
+        //printf("Tag is:\n");
+        //BIO_dump_fp (stdout, (const char *)tag, 16);
+        printString(tag, 16, "tag");
+        printf("\n");
+    }else{
+        printf("Server failed to encrypt\n");
+    }
 }
 
 
@@ -137,43 +147,7 @@ int readFromGivenFile(char *fname,
     }
 }
 
-void encrypt(unsigned char* plaintext, 
-             unsigned char *ciphertext, 
-             unsigned char *tag)
-{
-    /* Set up the key and iv. Do not hard code these in a real application. */
 
-    /* A 256 bit key */
-    unsigned char *key = (unsigned char *)"01234567890123456789012345678901";
-
-    /* A 128 bit IV */
-    unsigned char *iv = (unsigned char *)"0123456789012345";
-    size_t iv_len = 16;
-
-    /* Additional data */
-    unsigned char *additional =
-        (unsigned char *)"Accurate and efficient edge processing.";
-
-    int ciphertext_len;
-
-    /* Encrypt the plaintext */
-    ciphertext_len = gcm_encrypt(plaintext, strlen ((char *)plaintext),
-                                 additional, strlen ((char *)additional),
-                                 key,
-                                 iv, iv_len,
-                                 ciphertext, tag);
-
-    if(ciphertext_len>=0){
-      printf("Client encrypted successfully");
-      
-      printf("Ciphertext is:\n");
-      BIO_dump_fp (stdout, (const char *)ciphertext, ciphertext_len);
-      printf("Tag is:\n");
-      BIO_dump_fp (stdout, (const char *)tag, strlen(tag));
-    }else{
-      printf("encryption failed");
-    }
-}
 
 void handleErrors(void)
 {
@@ -269,7 +243,7 @@ void sendToServer(unsigned char *ciphertext, unsigned char *tag,  char *server_a
         exit(0); 
     } 
     else
-        printf("Socket successfully created..\n"); 
+        printf("socket successfully created..\n"); 
     
     bzero(&servaddr, sizeof(servaddr)); 
 
@@ -290,9 +264,9 @@ void sendToServer(unsigned char *ciphertext, unsigned char *tag,  char *server_a
     int write_result = write(sockfd, ciphertext, strlen(ciphertext)); 
 
     if(write_result>=0){
-        printf("Client sent ciphertext data\n");
+        printf("client sent ciphertext data");
     }else{
-        printf("Client failed to send cipehrtext data\n");
+        printf("client failed to send cipehrtext data\n");
         printf("error: %s\n",strerror(errno));
     }
     
@@ -302,9 +276,9 @@ void sendToServer(unsigned char *ciphertext, unsigned char *tag,  char *server_a
     write_result = write(sockfd, tag, strlen(tag)); 
 
     if(write_result>=0){
-        printf("Client sent tag data\n");
+        printf("client sent tag data\n");
     }else{
-        printf("Client failed to send tag data\n");
+        printf("client failed to send tag data\n");
         printf("error: %s\n",strerror(errno));
     }
 

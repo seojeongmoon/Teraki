@@ -65,10 +65,12 @@ int main(int argc, char *argv[]){
     
     //receive ciphertext and tag from the client
     ciphertext_len = receiveFromClient(PORT, ciphertext, tag);
-    
-    decryptedtext_len = decrypt(ciphertext, ciphertext_len, decryptedtext, tag);
 
-    printString(decryptedtext, decryptedtext_len, "decrypted text");
+    decryptedtext_len = decrypt(ciphertext, ciphertext_len, decryptedtext, tag);
+    
+    if(decryptedtext_len > 0){
+        printString(decryptedtext, decryptedtext_len, "Decrypted text");
+    }
 
 	return 0;
 }
@@ -96,12 +98,6 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *decryp
                                     tag,
                                     key, iv, iv_len,
                                     decryptedtext);
-    if(decryptedtext_len>=0){
-        printf("Server decrypted successfully\n");
-    }else{
-        printf("Server failed to decrypt\n");
-    }
-
     return decryptedtext_len;
 }
 
@@ -167,20 +163,19 @@ int gcm_decrypt(unsigned char *ciphertext, int ciphertext_len,
     /* Clean up */
     EVP_CIPHER_CTX_free(ctx);
 
-    //ret is always 0
-    /*if(ret > 0) {
+    if(ret > 0) {
         /* Success */
-    /*    plaintext_len += len;
+        printf("Server decrypted successfully\n");
+        plaintext_len += len;
         return plaintext_len;
     } else {
         /* Verify failed */
-    /*    return -1;
-    }*/
-
-    if(plaintext_len>0){
-        return plaintext_len;
-    }else{
-        return -1;
+        if(plaintext_len>0){
+            printf("Server decrypted, but the plaintext is not trustworthy\n");
+            return plaintext_len;
+        }else{
+            return -1;
+        }   
     }
 }
 
@@ -236,12 +231,12 @@ int receiveFromClient(char *port, unsigned char *ciphertext, unsigned char *tag)
     // Accept the data packet from client and verification 
     connfd = accept(sockfd, (SA*)&cli, &len); 
     if (connfd < 0) { 
-        printf("server acccept failed...\n"); 
+        printf("Server acccept failed...\n"); 
         printf("error: %s\n",strerror(errno));
         exit(0); 
     } 
     else
-        printf("server acccept the client...\n"); 
+        printf("Server acccept the client...\n"); 
 
     // read the message from client and copy it in ciphertext 
     bzero(buff, MAX);
@@ -249,10 +244,12 @@ int receiveFromClient(char *port, unsigned char *ciphertext, unsigned char *tag)
     read_result_ciphertext = read(connfd, buff, sizeof(buff));  
 
     if(read_result_ciphertext>0){
+        printf("\n");
         printf("Server received ciphertext\n");
         strcpy(ciphertext, buff);
+        printString(ciphertext, read_result_ciphertext, "Cipertext received");
     }else{
-        printf("server failed to receive ciphertext\n");
+        printf("Server failed to receive ciphertext\n");
         printf("error: %s\n",strerror(errno));
         return -1;
     }
@@ -260,13 +257,14 @@ int receiveFromClient(char *port, unsigned char *ciphertext, unsigned char *tag)
     // read the message from client and copy it in tag 
     bzero(buff, MAX);
     read_result_tag = -1;
-    read_result_tag = read(connfd, buff, sizeof(buff));  
+    read_result_tag = read(connfd, buff, sizeof(buff)); 
     
     if(read_result_tag>0){
       printf("Server received tag\n");
       strcpy(tag, buff);
+      printString(tag, 16, "Tag received");
     }else{
-      printf("server failed to receive tag\n");
+      printf("Server failed to receive tag\n");
       printf("error: %s\n",strerror(errno));
       return -1;
     }
